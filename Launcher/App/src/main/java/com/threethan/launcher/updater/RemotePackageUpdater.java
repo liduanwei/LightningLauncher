@@ -152,7 +152,7 @@ public class RemotePackageUpdater {
         manager.enqueue(request);
     }
 
-    public class DownloadBroadcastReceiver extends BroadcastReceiver {
+    public class DownloadCompleteBroadcastReceiver extends BroadcastReceiver {
         private File apkFile;
 
         @Override
@@ -163,7 +163,7 @@ public class RemotePackageUpdater {
         }
     }
 
-    private final DownloadBroadcastReceiver receiver = new DownloadBroadcastReceiver();
+    private final DownloadCompleteBroadcastReceiver receiver = new DownloadCompleteBroadcastReceiver();
 
     public void dispose() {
         try {
