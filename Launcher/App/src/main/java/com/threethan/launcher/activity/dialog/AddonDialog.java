@@ -38,25 +38,27 @@ public class AddonDialog extends BasicDialog<LauncherActivity> {
         if (dialog == null) return null;
 
         View addonFeed = dialog.findViewById(R.id.addonFeed);
-        if (addonFeed!=null) updateAddonButton(a, addonFeed, AddonUpdater.TAG_FEED);
+        if (addonFeed != null) updateAddonButton(a, addonFeed, AddonUpdater.TAG_FEED);
 
         View addonLibrary = dialog.findViewById(R.id.addonLibrary);
-        if (addonLibrary!=null) updateAddonButton(a, addonLibrary, AddonUpdater.TAG_LIBRARY);
+        if (addonLibrary != null) updateAddonButton(a, addonLibrary, AddonUpdater.TAG_LIBRARY);
 
         View addonPeople = dialog.findViewById(R.id.addonPeople);
-        if (addonLibrary!=null) updateAddonButton(a, addonPeople, AddonUpdater.TAG_PEOPLE);
+        if (addonLibrary != null) updateAddonButton(a, addonPeople, AddonUpdater.TAG_PEOPLE);
 
         View addonStore = dialog.findViewById(R.id.addonStore);
-        if (addonLibrary!=null) updateAddonButton(a, addonStore, AddonUpdater.TAG_STORE);
+        if (addonLibrary != null) updateAddonButton(a, addonStore, AddonUpdater.TAG_STORE);
 
 
         View addonAndroidTv = dialog.findViewById(R.id.addonAndroidTv);
-        if (addonAndroidTv!=null) updateAddonButton(a, addonAndroidTv, AddonUpdater.TAG_ATV_LM);
+        if (addonAndroidTv != null) updateAddonButton(a, addonAndroidTv, AddonUpdater.TAG_ATV_LM);
 
-        dialog.findViewById(R.id.addToDockButton).setOnClickListener(v -> showDockDialog());
+        View addToDockButton = dialog.findViewById(R.id.addToDockButton);
+        if (addToDockButton != null) addToDockButton.setOnClickListener(v -> showDockDialog());
         dialog.findViewById(R.id.exitButton).setOnClickListener(v -> dialog.dismiss());
         return dialog;
     }
+
     public static void updateAddonButton(final Activity a, final View layout, final String tag) {
 
         final View uninstallButton = layout.findViewById(R.id.addonUninstall);
@@ -83,12 +85,12 @@ public class AddonDialog extends BasicDialog<LauncherActivity> {
 
                 View[] visibleButtons;
                 switch (updater.getAddonState(addon)) {
-                    case INSTALLED_APP              -> visibleButtons = new View[]{uninstallButton, openButton};
-                    case INSTALLED_SERVICE_ACTIVE   -> visibleButtons = new View[]{deactivateButton, uninstallButton};
+                    case INSTALLED_APP -> visibleButtons = new View[]{uninstallButton, openButton};
+                    case INSTALLED_SERVICE_ACTIVE -> visibleButtons = new View[]{deactivateButton, uninstallButton};
                     case INSTALLED_SERVICE_INACTIVE -> visibleButtons = new View[]{activateButton, uninstallButton};
-                    case INSTALLED_HAS_UPDATE       -> visibleButtons = new View[]{updateButton, uninstallButton};
-                    case NOT_INSTALLED              -> visibleButtons = new View[]{installButton};
-                    default                         -> throw new RuntimeException("UNIMPLEMENTED ADDON STATE");
+                    case INSTALLED_HAS_UPDATE -> visibleButtons = new View[]{updateButton, uninstallButton};
+                    case NOT_INSTALLED -> visibleButtons = new View[]{installButton};
+                    default -> throw new RuntimeException("UNIMPLEMENTED ADDON STATE");
                 }
                 for (View view : visibleButtons) view.setVisibility(View.VISIBLE);
                 layout.postDelayed(this, 100);
@@ -99,13 +101,14 @@ public class AddonDialog extends BasicDialog<LauncherActivity> {
         uninstallButton.setOnClickListener(v -> getUpdater().uninstallAddon(a, tag));
         installButton.setOnClickListener(v -> getUpdater().installAddon(tag));
         updateButton.setOnClickListener(v -> getUpdater().installAddon(tag));
-        activateButton  .setOnClickListener(v -> showAccessibilityDialog());
+        activateButton.setOnClickListener(v -> showAccessibilityDialog());
         deactivateButton.setOnClickListener(v -> showAccessibilityDialog());
         openButton.setOnClickListener(v -> {
             PackageManager pm = a.getPackageManager();
             if (addon != null) a.startActivity(pm.getLaunchIntentForPackage(addon.packageName));
         });
     }
+
     protected static AddonUpdater getUpdater() {
         AddonUpdater updater = null;
         if (updaterRef != null) updater = updaterRef.get();

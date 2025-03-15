@@ -13,6 +13,7 @@ import android.content.IntentSender;
 import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -36,8 +37,8 @@ import java.util.Objects;
 public class RemotePackageUpdater {
     /**
      * The 'android:authority' of the provider which implements/has the name of
-     *  "android.support.v4.content.FileProvider"
-     *  (The package name is prepended automatically)
+     * "android.support.v4.content.FileProvider"
+     * (The package name is prepended automatically)
      */
     private static final String PROVIDER = /*packageName +*/".fileprovider";
 
@@ -58,20 +59,22 @@ public class RemotePackageUpdater {
 
         /**
          * Creates a new remotePackage
-         * @param packageName Name of the package once installed
+         *
+         * @param packageName   Name of the package once installed
          * @param latestVersion Latest version (string) of the package
-         * @param url String url from which to download the package
+         * @param url           String url from which to download the package
          */
         public RemotePackage(String packageName, String latestVersion, String url) {
             this.packageName = packageName;
             this.latestVersion = latestVersion;
             this.url = url;
         }
+
         @NonNull
         @Override
         public String toString() {
             String[] split = this.packageName.split("\\.");
-            return split[split.length-1];
+            return split[split.length - 1];
         }
     }
 
@@ -91,10 +94,11 @@ public class RemotePackageUpdater {
      * Identifies possible installation states of a package.
      * If a RemotePackage is a service, INSTALLED_SERVICE_INACTIVE will be used if it is installed,
      * but does not yet have an active accessibility service
+     *
      * @noinspection unused
      */
-    public enum AddonState
-    { NOT_INSTALLED, INSTALLED_HAS_UPDATE, INSTALLED_SERVICE_INACTIVE, INSTALLED_SERVICE_ACTIVE, INSTALLED_APP }
+    public enum AddonState {NOT_INSTALLED, INSTALLED_HAS_UPDATE, INSTALLED_SERVICE_INACTIVE, INSTALLED_SERVICE_ACTIVE, INSTALLED_APP}
+
     String latestVersionTag;
     private AlertDialog downloadingDialog;
 
@@ -105,55 +109,75 @@ public class RemotePackageUpdater {
 
     /**
      * Downloads the package, then prompts the user to install it
+     *
      * @param remotePackage RemotePackage to download
      */
     @SuppressLint("UnspecifiedRegisterReceiverFlag") // Can't be fixed on this API version
     public void downloadPackage(RemotePackage remotePackage) {
-        Log.v(TAG, "Downloading from url "+remotePackage.url);
+        Log.v(TAG, "Downloading from url " + remotePackage.url);
         DownloadManager.Request request = new DownloadManager.Request(Uri.parse(remotePackage.url));
-        request.setDescription("Downloading "+remotePackage); // Notification
+        request.setDescription("Downloading " + remotePackage); // Notification
         request.setTitle("Lightning Launcher Auto-Updater");
 
-        final String apkFileName = remotePackage+remotePackage.latestVersion+".apk";
-        final File apkFile = new File(activity.getExternalCacheDir()+"/"+APK_FOLDER, apkFileName);
+        final String apkFileName = remotePackage + remotePackage.latestVersion + ".apk";
+        final File apkFile = new File(activity.getExternalCacheDir() + "/" + APK_FOLDER, apkFileName);
 
         FileLib.delete(apkFile.getParent());
 
         request.setDestinationUri(Uri.fromFile(apkFile));
-        DownloadManager manager =
-                (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
-
+        DownloadManager manager = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
         if (downloadingDialog == null) {
             try {
                 downloadingDialog = new CustomDialog.Builder(activity)
-                    .setTitle(activity.getString(R.string.update_downloading_title, remotePackage))
-                    .setMessage(R.string.update_downloading_content)
-                    .setNegativeButton(R.string.update_hide_button, (dialog, which) -> dialog.cancel())
-                    .setOnDismissListener(d -> downloadingDialog = null)
-                    .show();
-            } catch (Exception ignored) {} // May rarely fail if window is invalid
+                        .setTitle(activity.getString(R.string.update_downloading_title, remotePackage))
+                        .setMessage(R.string.update_downloading_content)
+                        .setNegativeButton(R.string.update_hide_button, (dialog, which) -> dialog.cancel())
+                        .setOnDismissListener(d -> downloadingDialog = null)
+                        .show();
+            } catch (Exception ignored) {
+            } // May rarely fail if window is invalid
         }
 
 
         // Registers a one-off reciever to install the downloaded package
         // Android will prompt the user if they actually want to install
-        activity.registerReceiver(new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                if (downloadingDialog != null) downloadingDialog.dismiss();
-                installApk(apkFile);
-                activity.unregisterReceiver(this);
-            }
-        }, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+        receiver.apkFile = apkFile;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            activity.registerReceiver(receiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            activity.registerReceiver(receiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+        }
 
         // Start the download
         manager.enqueue(request);
+    }
+
+    public class DownloadBroadcastReceiver extends BroadcastReceiver {
+        private File apkFile;
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (downloadingDialog != null) downloadingDialog.dismiss();
+            installApk(apkFile);
+            activity.unregisterReceiver(this);
+        }
+    }
+
+    private final DownloadBroadcastReceiver receiver = new DownloadBroadcastReceiver();
+
+    public void dispose() {
+        try {
+            activity.unregisterReceiver(receiver);
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
     }
 
     /**
      * Installs an apk from a file. May be called externally.
      * <p>
      * A message will be shown if the file does not exist.
+     *
      * @param apkFile File pointing to the apk
      */
     public void installApk(File apkFile) {
@@ -170,10 +194,12 @@ public class RemotePackageUpdater {
                         .setMessage(R.string.update_failed_content)
                         .setNegativeButton(R.string.update_hide_button, (d, w) -> d.cancel())
                         .show();
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
 
-}
+    }
+
     public void installApk(Uri apkURI) {
         Runnable viewApk = () -> {
             Intent intent = new Intent(Intent.ACTION_VIEW);
@@ -196,8 +222,8 @@ public class RemotePackageUpdater {
 
             PackageInstaller.Session session = packageInstaller.openSession(sessionId);
             try (
-                 InputStream in = activity.getContentResolver().openInputStream(apkURI);
-                 OutputStream out = session.openWrite("package", 0, -1)) {
+                    InputStream in = activity.getContentResolver().openInputStream(apkURI);
+                    OutputStream out = session.openWrite("package", 0, -1)) {
                 byte[] buffer = new byte[65536];
                 int c;
                 //noinspection DataFlowIssue
@@ -213,8 +239,7 @@ public class RemotePackageUpdater {
             }
 
             BasicDialog.toast(activity.getString(R.string.installing));
-            InstallReceiver.setOnSuccess(() ->
-                    BasicDialog.toast(activity.getString(R.string.installed_successfully)));
+            InstallReceiver.setOnSuccess(() -> BasicDialog.toast(activity.getString(R.string.installed_successfully)));
             session.commit(createIntentSender(activity, sessionId));
 
             session.close();
@@ -232,9 +257,7 @@ public class RemotePackageUpdater {
     private static IntentSender createIntentSender(Context context, int sessionId) {
         Intent intent = new Intent(context, InstallReceiver.class);
         intent.putExtra(PackageInstaller.EXTRA_SESSION_ID, sessionId);
-        return PendingIntent.getBroadcast(context, sessionId, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE)
-                .getIntentSender();
+        return PendingIntent.getBroadcast(context, sessionId, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE).getIntentSender();
     }
 
 }

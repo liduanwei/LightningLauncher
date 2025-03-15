@@ -22,7 +22,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
-/** Get basic info related to app/game play time */
+/**
+ * Get basic info related to app/game play time
+ */
 public abstract class PlaytimeHelper {
     private static Long getTotalSeconds(String pkgName) {
         Calendar calendar = Calendar.getInstance();
@@ -41,6 +43,7 @@ public abstract class PlaytimeHelper {
     }
 
     private static final ExecutorService executorService = Executors.newSingleThreadExecutor();
+
     public static void getPlaytime(String pkgName, Consumer<String> onTotalPlaytime) {
         if (!hasUsagePermission()) return;
         if (pkgName.equals(QuestGameTuner.PKG_NAME))
@@ -50,6 +53,7 @@ public abstract class PlaytimeHelper {
             onTotalPlaytime.accept(formatSeconds(seconds));
         });
     }
+
     private static String formatSeconds(long seconds) {
         long hours = seconds / 3600;
         long minutes = (seconds % 3600) / 60;
@@ -70,17 +74,26 @@ public abstract class PlaytimeHelper {
         Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
         intent.setPackage("com.android.settings");
         LauncherActivity activity = LauncherActivity.getForegroundInstance();
-        if (activity != null)
-            activity.startActivity(intent);
-        else {
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            Core.context().startActivity(intent);
+        try {
+            if (activity != null)
+                activity.startActivity(intent);
+            else {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                Core.context().startActivity(intent);
+            }
+        } catch (Throwable e) {
+            e.printStackTrace();
         }
     }
-    /** Used to detect double presses */
+
+    /**
+     * Used to detect double presses
+     */
     private static boolean hasJustShownToast = false;
 
-    /** Opens an app's usage charts, if possible. Otherwise, prompts the user appropriately. */
+    /**
+     * Opens an app's usage charts, if possible. Otherwise, prompts the user appropriately.
+     */
     public static void openFor(String packageName) {
         if (hasUsagePermission()) {
             if (QuestGameTuner.isInstalled()) QuestGameTuner.chartApp(packageName);
@@ -97,8 +110,8 @@ public abstract class PlaytimeHelper {
             new CustomDialog.Builder(fi == null ? Core.context() : fi)
                     .setTitle(R.string.request_playtime_title)
                     .setMessage(R.string.request_playtime_msg)
-                    .setNegativeButton(R.string.cancel, (d,v) -> d.dismiss())
-                    .setPositiveButton(R.string.open_usage, (d,v) -> {
+                    .setNegativeButton(R.string.cancel, (d, v) -> d.dismiss())
+                    .setPositiveButton(R.string.open_usage, (d, v) -> {
                         PlaytimeHelper.requestPermission();
                         d.dismiss();
                     }).show();
