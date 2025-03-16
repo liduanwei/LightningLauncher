@@ -57,6 +57,7 @@ public class SettingsDialog extends BasicDialog<LauncherActivity> {
 
     /**
      * Creates a settings dialog. Make sure to call show()!
+     *
      * @param launcherActivity Parent LauncherActivity instance
      */
     public SettingsDialog(LauncherActivity launcherActivity) {
@@ -67,9 +68,15 @@ public class SettingsDialog extends BasicDialog<LauncherActivity> {
     public AlertDialog show() {
         if (instance != null) try {
             instance.dismiss();
-        } catch (Exception ignored) {}
-
-        AlertDialog dialog = super.show();
+        } catch (Exception ignored) {
+        }
+        AlertDialog dialog;
+        try {
+            dialog = super.show();
+        } catch (Throwable e) {
+            e.printStackTrace();
+            return null;
+        }
         if (dialog == null) return null;
         instance = dialog;
 
@@ -183,7 +190,7 @@ public class SettingsDialog extends BasicDialog<LauncherActivity> {
                     lastIndex = SettingsManager.BACKGROUND_DRAWABLES.length;
                 ImageView last = views[lastIndex];
 
-                if (index == views.length-1) a.showFilePicker(LauncherActivity.FilePickerTarget.WALLPAPER);
+                if (index == views.length - 1) a.showFilePicker(LauncherActivity.FilePickerTarget.WALLPAPER);
                 if (last == view) return;
 
                 ValueAnimator viewAnimator = ValueAnimator.ofInt(view.getWidth(), selectedWallpaperWidthPx);
@@ -208,7 +215,7 @@ public class SettingsDialog extends BasicDialog<LauncherActivity> {
                 a.setBackground(index);
 
                 // Set if darkSwitch mode is switch was automatically en/disabled
-                if (index != views.length-1) darkSwitch.setChecked(LauncherActivity.darkMode);
+                if (index != views.length - 1) darkSwitch.setChecked(LauncherActivity.darkMode);
             });
         }
 
@@ -266,7 +273,8 @@ public class SettingsDialog extends BasicDialog<LauncherActivity> {
     public void showAdvancedSettings() {
         if (advancedInstance != null) try {
             advancedInstance.dismiss();
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         AlertDialog dialog = new BasicDialog<>(a, R.layout.dialog_settings_advanced).show();
         if (dialog == null) return;
@@ -287,7 +295,8 @@ public class SettingsDialog extends BasicDialog<LauncherActivity> {
                     if (value > 128) {
                         try {
                             darkSwitchRef.get().setChecked(true);
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) {
+                        }
                     }
                 }
 
@@ -460,12 +469,12 @@ public class SettingsDialog extends BasicDialog<LauncherActivity> {
     }
 
 
-
     /**
      * Attaches a toggle switch to a specific setting
-     * @param toggle Switch ui element
+     *
+     * @param toggle  Switch ui element
      * @param setting Setting string key
-     * @param def Default setting value
+     * @param def     Default setting value
      */
     private void attachSwitchToSetting(Switch toggle, String setting,
                                        boolean def) {
@@ -474,9 +483,10 @@ public class SettingsDialog extends BasicDialog<LauncherActivity> {
 
     /**
      * Attaches a toggle switch to a specific setting
-     * @param toggle Switch ui element
-     * @param setting Setting string key
-     * @param def Default setting value
+     *
+     * @param toggle   Switch ui element
+     * @param setting  Setting string key
+     * @param def      Default setting value
      * @param onSwitch Consumes the new value when it is changed, after writing to the datastore
      * @param inverted If true, inverts the setting
      */
@@ -549,6 +559,7 @@ public class SettingsDialog extends BasicDialog<LauncherActivity> {
 
         dialog.findViewById(R.id.cancel).setOnClickListener(v -> dialog.dismiss());
     }
+
     public void showIconSettings(LauncherActivity a) {
         clearedIconCache = false;
         clearedIconCustom = false;
