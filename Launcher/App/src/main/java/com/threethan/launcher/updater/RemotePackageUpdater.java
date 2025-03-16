@@ -132,7 +132,10 @@ public class RemotePackageUpdater {
                         .setTitle(activity.getString(R.string.update_downloading_title, remotePackage))
                         .setMessage(R.string.update_downloading_content)
                         .setNegativeButton(R.string.update_hide_button, (dialog, which) -> dialog.cancel())
-                        .setOnDismissListener(d -> downloadingDialog = null)
+                        .setOnDismissListener(d -> {
+                            downloadingDialog = null;
+                            dispose();
+                        })
                         .show();
             } catch (Exception ignored) {
             } // May rarely fail if window is invalid
